@@ -12,6 +12,21 @@
   <h2>  your mouse: <span id= "your_mouse"></span> </h2>
   <h2> their mouse: <span id="their_mouse"></span> </h2>
   <script>
+/* if you don't specify these, you can only connect to local clients */
+const DEFAULT_CONFIG = {
+	iceServers: [
+		{ urls: "stun:stun.l.google.com:19302" },
+		{
+			urls: [
+				"turn:eu-0.turn.peerjs.com:3478",
+				"turn:us-0.turn.peerjs.com:3478",
+			],
+			username: "peerjs",
+			credential: "peerjsp",
+		},
+	],
+	sdpSemantics: "unified-plan",
+};
 
 /* this is the magic; without this function, the SDP message
  * that createOffer generates doesn't actually have enough ICE
@@ -62,9 +77,7 @@ function recv({ data }) {
   if (window.location.search != "") {
     const sdp = atob(window.location.search.substr(1));
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }]
-    });
+    const pc = new RTCPeerConnection(DEFAULT_CONFIG);
     pc.ondatachannel = event => {
       channel = event.channel;
       channel.onmessage = recv;
@@ -94,9 +107,7 @@ function recv({ data }) {
     return;
   }
 
-  const pc = new RTCPeerConnection({
-    iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }]
-  });
+  const pc = new RTCPeerConnection(DEFAULT_CONFIG);
   /* you can specify reliable & ordered here; we used defaults (both true)
    * basically, we get a TCP socket. UDP is simple though: disable both.
    * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createDataChannel
