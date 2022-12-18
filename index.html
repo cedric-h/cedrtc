@@ -1,0 +1,123 @@
+<!-- vim: sw=2 ts=2 expandtab smartindent ft=javascript
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>cedrtc</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="" />
+</head>
+<body>
+  <h2>  your mouse: <span id= "your_mouse"></span> </h2>
+  <h2> their mouse: <span id="their_mouse"></span> </h2>
+  <script>
+
+/* this is the magic; without this function, the SDP message
+ * that createOffer generates doesn't actually have enough ICE
+ * candidates for the other peer to connect. */
+function untilIceComplete(pc) {
+  return new Promise(res => {
+    pc.addEventListener("icegatheringstatechange", () => {
+      if (pc.iceGatheringState == "complete")
+        res();
+    });
+  });
+}
+
+/* this is used to show that untilIceComplete results in a larger
+ * offer, one that contains critical information that a connection
+ * cannot occur without. */
+function logSDP(msg) {
+  console.log(msg.type, btoa(msg.sdp).length);
+  return msg;
+
+  console.log(JSON.stringify(msg, null, 2));
+  console.log(            btoa(msg.sdp),             btoa(msg.sdp).length,
+              window.encodeURI(msg.sdp), window.encodeURI(msg.sdp).length,
+              btoa(msg.sdp)==window.encodeURI(msg.sdp));
+
+}
+
+/* simple send and receive. you could imagine more complicated,
+ * application-specific logic here. */
+let channel;
+window.onmousemove = ev => {
+  const data = new Uint32Array([ev.x, ev.y]).buffer;
+  document.getElementById("your_mouse").innerText =
+              new Uint32Array(data)[0] + ',' +
+              new Uint32Array(data)[1];
+
+  if (channel && channel.readyState == "open")
+    channel.send(data);
+}
+function recv({ data }) {
+  document.getElementById("their_mouse").innerText =
+              new Uint32Array(data)[0] + ',' +
+              new Uint32Array(data)[1];
+}
+
+(async () => {
+  /* you got a link to a session; you're a "client" */
+  if (window.location.search != "") {
+    const sdp = atob(window.location.search.substr(1));
+
+    const pc = new RTCPeerConnection();
+    pc.ondatachannel = event => {
+      channel = event.channel;
+      channel.onmessage = recv;
+    }
+
+    await pc.setRemoteDescription({ type: "offer", sdp });
+
+    /* doesn't actually seem to do anything for the remote client */
+    untilIceComplete(pc);
+    let answer = logSDP(await pc.createAnswer());
+    await pc.setLocalDescription(answer);
+
+    const div = document.createElement('div');
+    div.innerText = "send this to the host so he can verify/accept you";
+    document.body.appendChild(div);
+
+    const button = document.createElement('button');
+    button.onclick =
+      () => navigator.clipboard.writeText(btoa(pc.localDescription.sdp));
+    button.innerText = "click here to copy";
+    document.body.appendChild(button);
+
+    const pre = document.createElement('pre');
+    pre.innerText = btoa(pc.localDescription.sdp);
+    document.body.appendChild(pre);
+
+    return;
+  }
+
+  const pc = new RTCPeerConnection();
+  /* you can specify reliable & ordered here; we used defaults (both true)
+   * basically, we get a TCP socket. UDP is simple though: disable both.
+   * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createDataChannel
+   */
+  channel = pc.createDataChannel("dataChannel");
+  channel.onopen = console.log;
+  channel.onclose = console.log;
+  channel.onmessage = recv;
+  
+  let offer = logSDP(await pc.createOffer());
+  await pc.setLocalDescription(offer);
+
+  /* these next three lines are crucial for making sure the offer
+   * has the necessary information. */
+  await untilIceComplete(pc);
+  offer = logSDP(await pc.createOffer());
+  await pc.setLocalDescription(offer);
+
+  /* put the link in the top bar without refreshing the page */
+  window.history.pushState("", "", '?' + btoa(offer.sdp));
+
+  const answer = atob(prompt("res?"));
+  console.log(answer);
+  await pc.setRemoteDescription({ type: "answer", sdp: answer });
+})();
+  </script>
+</body>
+</html>
