@@ -28,6 +28,8 @@ const DEFAULT_CONFIG = {
 	/* this was in peer.js's config, but it makes sdp blobs REAL big */
 	// sdpSemantics: "unified-plan",
 };
+const decode = b =>{a=e={},d=b.split(""),c=f=d[0],g=[c],h=o=256;for(b=1;b<d.length;b++)a=d[b].charCodeAt(0),a=h>a?d[b]:e[a]?e[a]:f+c,g.push(a),c=a.charAt(0),e[o]=f+c,o++,f=a;return g.join("")};
+const encode = c =>{x='charCodeAt',b=z={},f=c.split(""),d=[],a=f[0],g=256;for(b=1;b<f.length;b++)c=f[b],null!=z[a+c]?a+=c:(d.push(1<a.length?z[a]:a[x](0)),z[a+c]=g,g++,a=c);d.push(1<a.length?z[a]:a[x](0));for(b=0;b<d.length;b++)d[b]=String.fromCharCode(d[b]);return d.join("")};
 
 /* this is the magic; without this function, the SDP message
  * that createOffer generates doesn't actually have enough ICE
@@ -45,7 +47,7 @@ function untilIceComplete(pc) {
  * offer, one that contains critical information that a connection
  * cannot occur without. */
 function logSDP(msg) {
-  console.log(msg.type, window.encodeURI(msg.sdp).length);
+  console.log(msg.type, encode(msg.sdp).length);
   return msg;
 
   console.log(JSON.stringify(msg, null, 2));
@@ -76,7 +78,7 @@ function recv({ data }) {
 (async () => {
   /* you got a link to a session; you're a "client" */
   if (window.location.search != "") {
-    const sdp = window.decodeURI(window.location.search.substr(1));
+    const sdp = decode(window.location.search.substr(1));
 
     const pc = new RTCPeerConnection(DEFAULT_CONFIG);
     pc.ondatachannel = event => {
@@ -97,12 +99,12 @@ function recv({ data }) {
 
     const button = document.createElement('button');
     button.onclick =
-      () => navigator.clipboard.writeText(window.encodeURI(pc.localDescription.sdp));
+      () => navigator.clipboard.writeText(encode(pc.localDescription.sdp));
     button.innerText = "click here to copy";
     document.body.appendChild(button);
 
     const pre = document.createElement('pre');
-    pre.innerText = window.encodeURI(pc.localDescription.sdp);
+    pre.innerText = encode(pc.localDescription.sdp);
     document.body.appendChild(pre);
 
     return;
@@ -128,11 +130,11 @@ function recv({ data }) {
   await pc.setLocalDescription(offer);
 
   /* put the link in the top bar without refreshing the page */
-  window.history.pushState("", "", '?' + window.encodeURI(offer.sdp));
+  window.history.pushState("", "", '?' + encode(offer.sdp));
 
   let input;
   while (!(input = prompt("res?")));
-  const answer = window.decodeURI(input);
+  const answer = decode(input);
   console.log(answer);
   await pc.setRemoteDescription({ type: "answer", sdp: answer });
 })();
