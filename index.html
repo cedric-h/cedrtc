@@ -25,7 +25,8 @@ const DEFAULT_CONFIG = {
 			credential: "peerjsp",
 		},
 	],
-	sdpSemantics: "unified-plan",
+	/* this was in peer.js's config, but it makes sdp blobs REAL big */
+	// sdpSemantics: "unified-plan",
 };
 
 /* this is the magic; without this function, the SDP message
