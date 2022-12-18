@@ -45,7 +45,7 @@ function untilIceComplete(pc) {
  * offer, one that contains critical information that a connection
  * cannot occur without. */
 function logSDP(msg) {
-  console.log(msg.type, btoa(msg.sdp).length);
+  console.log(msg.type, window.encodeURI(msg.sdp).length);
   return msg;
 
   console.log(JSON.stringify(msg, null, 2));
@@ -76,7 +76,7 @@ function recv({ data }) {
 (async () => {
   /* you got a link to a session; you're a "client" */
   if (window.location.search != "") {
-    const sdp = atob(window.location.search.substr(1));
+    const sdp = window.decodeURI(window.location.search.substr(1));
 
     const pc = new RTCPeerConnection(DEFAULT_CONFIG);
     pc.ondatachannel = event => {
@@ -97,12 +97,12 @@ function recv({ data }) {
 
     const button = document.createElement('button');
     button.onclick =
-      () => navigator.clipboard.writeText(btoa(pc.localDescription.sdp));
+      () => navigator.clipboard.writeText(window.encodeURI(pc.localDescription.sdp));
     button.innerText = "click here to copy";
     document.body.appendChild(button);
 
     const pre = document.createElement('pre');
-    pre.innerText = btoa(pc.localDescription.sdp);
+    pre.innerText = window.encodeURI(pc.localDescription.sdp);
     document.body.appendChild(pre);
 
     return;
@@ -128,11 +128,11 @@ function recv({ data }) {
   await pc.setLocalDescription(offer);
 
   /* put the link in the top bar without refreshing the page */
-  window.history.pushState("", "", '?' + btoa(offer.sdp));
+  window.history.pushState("", "", '?' + window.encodeURI(offer.sdp));
 
   let input;
   while (!(input = prompt("res?")));
-  const answer = atob(input);
+  const answer = window.decodeURI(input);
   console.log(answer);
   await pc.setRemoteDescription({ type: "answer", sdp: answer });
 })();
