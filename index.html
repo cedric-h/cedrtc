@@ -114,7 +114,9 @@ function recv({ data }) {
   /* put the link in the top bar without refreshing the page */
   window.history.pushState("", "", '?' + btoa(offer.sdp));
 
-  const answer = atob(prompt("res?"));
+  let input;
+  while (!(input = prompt("res?")));
+  const answer = atob(input);
   console.log(answer);
   await pc.setRemoteDescription({ type: "answer", sdp: answer });
 })();
